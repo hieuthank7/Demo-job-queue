@@ -1,13 +1,13 @@
-import { Job } from "../../../shared/queue/queue.types";
+import { Job } from "bullmq";
 
 /**
  * Handle image-related jobs (resize, compress, watermark...)
  * Simulated with delay, in production use sharp/jimp
  */
 export async function handleImageJob(job: Job): Promise<void> {
-  const { imagePath, width, height } = job.payload;
+  const { imagePath, width, height } = job.data;
 
-  switch (job.type) {
+  switch (job.name) {
     case "resize_avatar":
       console.log(
         `[Image] Resizing avatar: ${imagePath} → ${width}x${height}...`,
@@ -23,7 +23,7 @@ export async function handleImageJob(job: Job): Promise<void> {
       break;
 
     default:
-      throw new Error(`Unknown image job type: ${job.type}`);
+      throw new Error(`Unknown image job type: ${job.name}`);
   }
 }
 
