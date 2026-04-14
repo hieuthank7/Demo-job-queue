@@ -1,6 +1,6 @@
 import { ResultSetHeader } from "mysql2/promise";
 import pool from "../../../shared/database";
-import { addJob } from "../../../shared/queue/mysql-queue";
+import { addJob } from "../../../shared/queue/bullmq-queue";
 
 interface RegisterInput {
   email: string;
@@ -19,11 +19,8 @@ export async function registerUser(input: RegisterInput) {
   const userId = result.insertId;
 
   // 2. Push email job to queue (do NOT send email here)
-  const jobId = await addJob({
-    queue: "email",
-    type: "welcome_email",
-    payload: { userId, email, name },
-  });
+  const job = await addJob("email", "welcome_email", { userId, email, name });
+  const jobId = job.id;
 
   return { userId, jobId };
 }

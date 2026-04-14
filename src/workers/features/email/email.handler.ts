@@ -1,12 +1,12 @@
-import { Job } from "../../../shared/queue/queue.types";
+import { Job } from "bullmq";
 
 /**
  * Handle email-related jobs
  */
 export async function handleEmailJob(job: Job): Promise<void> {
-  const { email, name } = job.payload;
+  const { email, name } = job.data;
 
-  switch (job.type) {
+  switch (job.name) {
     case "welcome_email":
       // Simulate sending a normal email (takes 2 seconds)
       console.log(`[Email] Sending welcome email to ${email}...`);
@@ -45,7 +45,7 @@ export async function handleEmailJob(job: Job): Promise<void> {
       break;
 
     default:
-      throw new Error(`Unknown email job type: ${job.type}`);
+      throw new Error(`Unknown email job type: ${job.name}`);
   }
 }
 

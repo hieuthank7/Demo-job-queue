@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { registerUser } from "./auth.service";
+import { addJob } from "../../../shared/queue/bullmq-queue";
 
 const router = Router();
 
@@ -37,19 +38,22 @@ router.post("/register", async (req: Request, res: Response) => {
  */
 router.post("/test-fail-job", async (req: Request, res: Response) => {
   try {
-    const { email, name, type = "failing_email" } = req.body;
+    const { email, name } = req.body;
+    if (!email || !name) {
+      res.status(400).json({ error: "Email and name are required" });
+      return;
+    }
 
-    const { addJob } = await import("../../../shared/queue/mysql-queue");
-
-    const jobId = await addJob({
-      queue: "email",
-      type, // 'failing_email' or 'flaky_email'
-      payload: { email, name },
-      max_attempts: 3,
-    });
+    const job = await addJob(
+      "email",
+      "failing_email",
+      { email, name },
+      { attempts: 3 },
+    );
+    const jobId = job.id;
 
     res.status(201).json({
-      message: `Test job created (type: ${type})`,
+      message: `Test job created (type: failing_email)`,
       jobId,
     });
   } catch (error: any) {
@@ -65,26 +69,25 @@ router.post("/test-fail-job", async (req: Request, res: Response) => {
 router.post("/send-otp", async (req: Request, res: Response) => {
   try {
     const { email, name } = req.body;
-
     if (!email || !name) {
       res.status(400).json({ error: "Email and name are required" });
       return;
     }
 
-    const { addJob } = await import("../../../shared/queue/mysql-queue");
-    const { JobPriority } = await import("../../../shared/queue/queue.types");
-
-    const jobId = await addJob({
-      queue: "email",
-      type: "otp_email",
-      payload: { email, name, otp: "123456" },
-      priority: JobPriority.URGENT, // priority = 2
-    });
+    const job = await addJob(
+      "email",
+      "otp_email",
+      { email, name, otp: "123456" },
+      {
+        priority: 1,
+      },
+    );
+    const jobId = job.id;
 
     res.status(201).json({
       message: "OTP job created with URGENT priority",
       jobId,
-      priority: "URGENT (2)",
+      priority: "1",
     });
   } catch (error: any) {
     console.error("[Auth] Error:", error);
@@ -99,28 +102,27 @@ router.post("/send-otp", async (req: Request, res: Response) => {
 router.post("/send-reminder", async (req: Request, res: Response) => {
   try {
     const { email, name } = req.body;
-
     if (!email || !name) {
       res.status(400).json({ error: "Email and name are required" });
       return;
     }
 
-    const { addJob } = await import("../../../shared/queue/mysql-queue");
-
-    // Delay 10 seconds for demo (production would use 24 hours)
-    const scheduledAt = new Date(Date.now() + 10 * 1000);
-
-    const jobId = await addJob({
-      queue: "email",
-      type: "reminder_email",
-      payload: { email, name },
-      scheduled_at: scheduledAt,
-    });
+    const { addJob } = await import("../../../shared/queue/bullmq-queue");
+    const delay = 10000;
+    const job = await addJob(
+      "email",
+      "reminder_email",
+      { email, name },
+      {
+        delay: delay,
+      },
+    );
+    const jobId = job.id;
 
     res.status(201).json({
       message: `Reminder scheduled after 10 seconds`,
       jobId,
-      scheduled_at: scheduledAt.toISOString(),
+      scheduled_at: delay.toString(),
     });
   } catch (error: any) {
     console.error("[Auth] Error:", error);
@@ -134,17 +136,12 @@ router.post("/send-reminder", async (req: Request, res: Response) => {
  */
 router.post("/test-image-job", async (req: Request, res: Response) => {
   try {
-    const { addJob } = await import("../../../shared/queue/mysql-queue");
-
-    const jobId = await addJob({
-      queue: "image",
-      type: "resize_avatar",
-      payload: {
-        imagePath: "/uploads/avatar.jpg",
-        width: 200,
-        height: 200,
-      },
+    const job = await addJob("image", "resize_avatar", {
+      imagePath: "/uploads/avatar.jpg",
+      width: 200,
+      height: 200,
     });
+    const jobId = job.id;
 
     res.status(201).json({ message: "Image job created", jobId });
   } catch (error: any) {
@@ -159,17 +156,12 @@ router.post("/test-image-job", async (req: Request, res: Response) => {
  */
 router.post("/test-report-job", async (req: Request, res: Response) => {
   try {
-    const { addJob } = await import("../../../shared/queue/mysql-queue");
-
-    const jobId = await addJob({
-      queue: "report",
-      type: "daily_revenue",
-      payload: {
-        reportType: "revenue",
-        dateFrom: "2026-04-01",
-        dateTo: "2026-04-12",
-      },
+    const job = await addJob("report", "daily_revenue", {
+      reportType: "revenue",
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-12",
     });
+    const jobId = job.id;
 
     res.status(201).json({ message: "Report job created", jobId });
   } catch (error: any) {
