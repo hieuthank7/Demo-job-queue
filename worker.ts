@@ -1,10 +1,24 @@
 import { startWorker } from "./src/workers/bullmq-worker";
-import { handleEmailJob } from "./src/workers/features/email/email.handler";
-import { handleImageJob } from "./src/workers/features/image/image.handler";
-import { handleReportJob } from "./src/workers/features/report/report.handler";
+import {
+  handleEmailJob,
+  handleImageJob,
+  handleReportJob,
+  handleUserJob,
+} from "./src/workers/features";
+import { registerRepeatableJobs } from "./src/workers/scheduler";
+
+// Register all repeatable jobs (runs once on startup)
+registerRepeatableJobs().catch((err) => {
+  console.error("[Scheduler] Failed to register:", err);
+});
 
 // Start workers
 const workers = [
+  startWorker({
+    queue: "user",
+    handler: handleUserJob,
+    concurrency: 2,
+  }),
   startWorker({
     queue: "email",
     handler: handleEmailJob,

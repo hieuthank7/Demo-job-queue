@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { registerUser } from "./auth.service";
-import { addJob } from "../../../shared/queue/bullmq-queue";
+import { addJob, flowProducer } from "../../../shared/queue/bullmq-queue";
 
 const router = Router();
 
@@ -166,6 +166,51 @@ router.post("/test-report-job", async (req: Request, res: Response) => {
     res.status(201).json({ message: "Report job created", jobId });
   } catch (error: any) {
     console.error("[Test] Error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * TEST: Create a flow — save user → resize avatar → send welcome email
+ * POST /api/auth/register-flow
+ */
+router.post("/register-flow", async (req: Request, res: Response) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email || !name) {
+      res.status(400).json({ error: "Email and name are required" });
+      return;
+    }
+
+    const flow = await flowProducer.add({
+      name: "send_welcome_flow",
+      queueName: "email",
+      data: { email, name },
+      children: [
+        {
+          name: "save_user",
+          queueName: "user",
+          data: { email, name },
+        },
+        {
+          name: "resize_avatar",
+          queueName: "image",
+          data: {
+            imagePath: `/uploads/${email}.jpg`,
+            width: 200,
+            height: 200,
+          },
+        },
+      ],
+    });
+
+    res.status(201).json({
+      message: "Registration flow created",
+      flowId: flow.job.id,
+    });
+  } catch (error: any) {
+    console.error("[Auth] Flow error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

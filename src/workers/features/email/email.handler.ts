@@ -44,6 +44,23 @@ export async function handleEmailJob(job: Job): Promise<void> {
       console.log(`[Email] Reminder sent to ${name} <${email}> ✓`);
       break;
 
+    case "send_welcome_flow":
+      // Read values from child jobs (save_user, resize_avatar)
+      const childrenValues = await job.getChildrenValues();
+      console.log(`[Email] Children values:`, childrenValues);
+
+      // Find the user data from save_user child
+      const userData = Object.values(childrenValues).find(
+        (v: any) => v?.userId,
+      ) as any;
+
+      console.log(
+        `[Email] Sending welcome email to ${userData.email} (user #${userData.userId})...`,
+      );
+      await delay(1500);
+      console.log(`[Email] Welcome email sent ✓`);
+      break;
+
     default:
       throw new Error(`Unknown email job type: ${job.name}`);
   }
