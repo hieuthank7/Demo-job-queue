@@ -8,6 +8,7 @@ import {
   emailQueue,
   imageQueue,
   reportQueue,
+  userQueue,
 } from "../shared/queue/bullmq-queue";
 
 const app = express();
@@ -25,6 +26,7 @@ createBullBoard({
     new BullMQAdapter(emailQueue),
     new BullMQAdapter(imageQueue),
     new BullMQAdapter(reportQueue),
+    new BullMQAdapter(userQueue),
   ],
   serverAdapter,
 });
